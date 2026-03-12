@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Team Hiphop Battle Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', 'Noto Sans KR', sans-serif;
+            background-color: #000000;
+            color: #F9FAFB;
+            overflow-x: hidden;
+        }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .scale-btn { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .scale-btn:active { transform: scale(0.96); }
+        
+        .battle-animate { animation: shake 0.5s infinite; }
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+        }
+        
+        .dice-roll { animation: roll 0.5s ease-out; border: 1px solid #374151; }
+        @keyframes roll {
+            0% { transform: translateY(15px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        
+        .success-bg { background-color: rgba(16, 185, 129, 0.08) !important; border-color: rgba(16, 185, 129, 0.3) !important; }
+        .fail-bg { background-color: rgba(239, 68, 68, 0.05) !important; border-color: rgba(239, 68, 68, 0.2) !important; }
+        
+        .img-glow { box-shadow: 0 0 15px rgba(255, 255, 255, 0.1); }
+        .team-member-card { transition: all 0.3s ease; }
+
+        .history-card { animation: slideIn 0.4s ease-out forwards; }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Password Screen Style */
+        #password-screen {
+            background-color: #111827;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="app" class="w-full max-w-[480px] min-h-[850px] bg-[#111827] relative rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl border border-[#374151]">
+        
+        <!-- Password Screen (Initial State) -->
+        <div id="password-screen" class="absolute inset-0 flex flex-col items-center justify-center p-8 z-50">
+            <div class="mb-10 text-center">
+                <div class="w-16 h-16 bg-[#1F2937] rounded-3xl flex items-center justify-center mx-auto mb-6 border border-[#374151] shadow-xl">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <h2 class="text-3xl font-black italic text-white tracking-tighter uppercase mb-2">Access Locked</h2>
+                <p class="text-sm text-[#9CA3AF] font-bold">앱을 시작하려면 비밀번호를 입력하세요.</p>
+            </div>
+            
+            <div class="w-full space-y-4">
+                <input type="password" id="password-input" placeholder="••••••" class="w-full py-5 px-6 rounded-2xl bg-[#1F2937] border-2 border-[#374151] focus:border-white outline-none text-white text-center text-2xl tracking-[0.5em] font-bold transition-all">
+                <p id="password-error" class="hidden text-center text-red-500 text-xs font-bold">잘못된 비밀번호입니다.</p>
+                <button onclick="checkPassword()" class="w-full py-5 rounded-2xl bg-[#F9FAFB] text-[#111827] font-extrabold text-xl scale-btn shadow-lg uppercase tracking-tight">
+                    배틀 시작하기
+                </button>
+            </div>
+        </div>
+
+        <!-- Main App Content (Initially Hidden) -->
+        <div id="main-app" class="hidden flex flex-col h-full flex-1 overflow-hidden">
+            <!-- Header -->
+            <div class="p-6 border-b border-[#374151] flex justify-between items-center bg-[#111827] sticky top-0 z-20">
+                <div>
+                    <h1 class="text-2xl font-black italic text-white tracking-tighter uppercase">RAP BATTLE</h1>
+                    <p class="text-[10px] text-[#9CA3AF] font-bold tracking-widest uppercase">랩 배틀 시뮬레이터</p>
+                </div>
+                <button onclick="location.reload()" class="p-2 rounded-full bg-[#1F2937] text-[#9CA3AF] hover:text-white transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                </button>
+            </div>
+
+            <div id="main-content" class="flex-1 overflow-y-auto no-scrollbar p-5 pb-32">
+                <!-- Setup Stage -->
+                <div id="setup-container" class="space-y-8">
+                    <!-- Team 1 -->
+                    <div id="team1-container" class="space-y-4">
+                        <div class="flex justify-between items-center px-2">
+                            <input type="text" id="team1-name-input" placeholder="TEAM A 이름" value="TEAM A" class="bg-transparent border-none focus:outline-none text-[#EF4444] font-black italic uppercase text-lg w-full">
+                            <button onclick="addMember(1)" id="add-btn-1" class="whitespace-nowrap text-[10px] font-bold text-[#EF4444] hover:underline">+ 멤버 추가</button>
+                        </div>
+                        <div id="team1-list" class="space-y-3">
+                            <!-- Team 1 Members injected here -->
+                        </div>
+                    </div>
+
+                    <div class="flex justify-center -my-2 relative z-10"><div class="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center font-black italic border-4 border-[#111827] text-sm">VS</div></div>
+
+                    <!-- Team 2 -->
+                    <div id="team2-container" class="space-y-4">
+                        <div class="flex justify-between items-center px-2">
+                            <input type="text" id="team2-name-input" placeholder="TEAM B 이름" value="TEAM B" class="bg-transparent border-none focus:outline-none text-[#A855F7] font-black italic uppercase text-lg w-full">
+                            <button onclick="addMember(2)" id="add-btn-2" class="whitespace-nowrap text-[10px] font-bold text-[#A855F7] hover:underline">+ 멤버 추가</button>
+                        </div>
+                        <div id="team2-list" class="space-y-3">
+                            <!-- Team 2 Members injected here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Battle Container -->
+                <div id="battle-container" class="hidden flex flex-col items-center justify-center py-6 space-y-8">
+                    <div class="w-full flex justify-between items-center px-4 relative">
+                        <div class="flex flex-col items-center gap-2 z-10 w-1/3">
+                            <div class="w-20 h-20 rounded-full border-4 border-[#EF4444] overflow-hidden bg-[#1F2937] img-glow" id="p1-battle-img-box"></div>
+                            <div class="text-[10px] font-black text-white text-center truncate w-full" id="p1-battle-name">Name</div>
+                            <div class="text-[10px] font-black bg-[#EF4444] text-white px-3 py-0.5 rounded-full italic shadow-lg" id="p1-success-count">HIT: 0</div>
+                        </div>
+                        <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0">
+                            <div class="text-3xl font-black italic text-red-500 battle-animate whitespace-nowrap uppercase">Fight!!</div>
+                        </div>
+                        <div class="flex flex-col items-center gap-2 z-10 w-1/3">
+                            <div class="w-20 h-20 rounded-full border-4 border-[#A855F7] overflow-hidden bg-[#1F2937] img-glow" id="p2-battle-img-box"></div>
+                            <div class="text-[10px] font-black text-white text-center truncate w-full" id="p2-battle-name">Name</div>
+                            <div class="text-[10px] font-black bg-[#A855F7] text-white px-3 py-0.5 rounded-full italic shadow-lg" id="p2-success-count">HIT: 0</div>
+                        </div>
+                    </div>
+                    <div id="battle-logs" class="w-full space-y-3 px-2 overflow-y-auto max-h-[450px] no-scrollbar"></div>
+                </div>
+
+                <!-- Result Container -->
+                <div id="result-container" class="hidden flex flex-col items-center py-6">
+                    <div class="relative mb-8 flex flex-col items-center">
+                        <div class="w-40 h-40 rounded-full border-8 border-yellow-400 overflow-hidden shadow-[0_0_30px_rgba(250,204,21,0.4)] bg-[#1F2937]" id="winner-img-box"></div>
+                        <div class="absolute -bottom-4 bg-yellow-400 text-black px-6 py-1.5 rounded-full font-black text-sm italic shadow-lg whitespace-nowrap">WIN</div>
+                    </div>
+                    <h2 id="winner-name" class="text-3xl font-black mb-1 text-white uppercase italic tracking-tighter text-center"></h2>
+                    <p id="winner-desc" class="text-sm text-[#9CA3AF] italic mb-6"></p>
+                    <div id="final-summary" class="w-full bg-[#1F2937] rounded-[2rem] p-6 border border-[#374151] text-center mb-8">
+                        <div class="text-xs text-[#9CA3AF] font-bold uppercase tracking-widest mb-2 italic">Performance Analysis</div>
+                        <div id="score-bars" class="space-y-4"></div>
+                    </div>
+
+                    <!-- History Section -->
+                    <div id="match-history" class="w-full space-y-4">
+                        <div class="flex items-center gap-3 px-2">
+                            <div class="h-[1px] flex-1 bg-gradient-to-r from-transparent to-[#374151]"></div>
+                            <h3 class="text-[10px] font-black text-[#6B7280] uppercase tracking-widest italic">Match History & Logs</h3>
+                            <div class="h-[1px] flex-1 bg-gradient-l from-transparent to-[#374151]"></div>
+                        </div>
+                        <div id="history-list" class="space-y-3">
+                            <!-- History items injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Button -->
+            <div id="footer-actions" class="p-6 bg-[#111827] border-t border-[#374151] sticky bottom-0 z-20">
+                <button id="action-btn" onclick="startBattle()" class="w-full py-5 rounded-2xl bg-[#F9FAFB] text-[#111827] font-extrabold text-xl scale-btn shadow-lg uppercase tracking-tight">
+                    랩배틀 시작
+                </button>
+                <div id="result-btns" class="hidden flex gap-3 w-full">
+                    <button onclick="rematch()" class="flex-1 py-5 rounded-2xl bg-[#374151] text-white font-extrabold text-lg scale-btn shadow-lg uppercase tracking-tight">
+                        재대결
+                    </button>
+                    <button onclick="location.reload()" class="flex-1 py-5 rounded-2xl bg-[#F9FAFB] text-[#111827] font-extrabold text-lg scale-btn shadow-lg uppercase tracking-tight">
+                        새 대결
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Password Check Function
+        function checkPassword() {
+            const input = document.getElementById('password-input').value;
+            const errorMsg = document.getElementById('password-error');
+            const passwordScreen = document.getElementById('password-screen');
+            const mainApp = document.getElementById('main-app');
+
+            if (input === 'DD8789') {
+                passwordScreen.classList.add('hidden');
+                mainApp.classList.remove('hidden');
+            } else {
+                errorMsg.classList.remove('hidden');
+                document.getElementById('password-input').value = '';
+                document.getElementById('password-input').focus();
+            }
+        }
+
+        // Allow 'Enter' key to submit password
+        document.getElementById('password-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+
+        const genreColors = {'Trap': '#EF4444', 'BoomBap': '#F59E0B', 'Drill': '#6B7280', 'SingingRap': '#A855F7'};
+        const genreConfig = {
+            'Trap': { names: ['에너지', '트렌드', '아우라', '스웨그', '브래깅', '중독성'] },
+            'BoomBap': { names: ['딕션/전달', '라임/작사', '서사', '기본기', '발성/호흡', '메시지'] },
+            'Drill': { names: ['공격력', '리듬감', '에너지', '무대장악', '톤/발성', '정체성'] },
+            'SingingRap': { names: ['멜로디', '음색/톤', '싱잉센스', '감정/표현', '가창력', '대중성'] }
+        };
+
+        let teams = {
+            1: [{ id: Date.now(), name: '래퍼 A1', genre: 'Trap', stats: [70, 70, 70, 70, 70, 70], img: null }],
+            2: [{ id: Date.now() + 1, name: '래퍼 B1', genre: 'BoomBap', stats: [70, 70, 70, 70, 70, 70], img: null }]
+        };
+
+        let matchHistory = [];
+        let currentBattleEvents = []; 
+
+        function renderTeams() {
+            [1, 2].forEach(tNum => {
+                const list = document.getElementById(`team${tNum}-list`);
+                if (!list) return;
+                list.innerHTML = teams[tNum].map((member, idx) => `
+                    <div class="p-4 bg-[#1F2937] rounded-[1.5rem] border border-[#374151] relative team-member-card">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="relative w-14 h-14 bg-[#111827] rounded-xl border-2 border-dashed border-[#4B5563] flex items-center justify-center overflow-hidden cursor-pointer" onclick="document.getElementById('file-${tNum}-${idx}').click()">
+                                ${member.img ? `<img src="${member.img}" class="w-full h-full object-cover">` : `<span class="text-xl opacity-50">📷</span>`}
+                                <input type="file" id="file-${tNum}-${idx}" class="hidden" accept="image/*" onchange="updateMemberImg(${tNum}, ${idx}, event)">
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-center">
+                                    <input type="text" placeholder="멤버 이름" value="${member.name}" oninput="teams[${tNum}][${idx}].name = this.value" class="bg-transparent border-b border-[#4B5563] focus:border-white outline-none text-sm font-bold py-0.5 mb-1 text-white w-2/3">
+                                    ${teams[tNum].length > 1 ? `<button onclick="removeMember(${tNum}, ${idx})" class="text-red-500 opacity-50 hover:opacity-100"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>` : ''}
+                                </div>
+                                <select onchange="updateMemberGenre(${tNum}, ${idx}, this.value)" class="bg-[#111827] text-[10px] font-bold text-[#9CA3AF] rounded-lg px-2 py-0.5 outline-none border border-[#374151]">
+                                    <option value="Trap" ${member.genre==='Trap'?'selected':''}>트랩</option>
+                                    <option value="BoomBap" ${member.genre==='BoomBap'?'selected':''}>붐뱁</option>
+                                    <option value="Drill" ${member.genre==='Drill'?'selected':''}>드릴</option>
+                                    <option value="SingingRap" ${member.genre==='SingingRap'?'selected':''}>싱잉</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2 text-[8px]">
+                            ${genreConfig[member.genre].names.map((n, sIdx) => `
+                                <div>
+                                    <label class="block text-[#9CA3AF] font-bold uppercase truncate mb-0.5">${n}</label>
+                                    <input type="number" value="${member.stats[sIdx]}" oninput="teams[${tNum}][${idx}].stats[${sIdx}] = parseInt(this.value)||0" class="w-full bg-[#111827] rounded-lg p-1 border border-[#374151] text-white">
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+                const addBtn = document.getElementById(`add-btn-${tNum}`);
+                if (addBtn) addBtn.style.display = teams[tNum].length >= 5 ? 'none' : 'block';
+            });
+        }
+
+        function addMember(tNum) {
+            if(teams[tNum].length < 5) {
+                const names = tNum === 1 ? ['A2', 'A3', 'A4', 'A5'] : ['B2', 'B3', 'B4', 'B5'];
+                teams[tNum].push({ 
+                    id: Date.now(), 
+                    name: `래퍼 ${names[teams[tNum].length-1]}`, 
+                    genre: tNum === 1 ? 'Trap' : 'BoomBap', 
+                    stats: [70, 70, 70, 70, 70, 70], 
+                    img: null 
+                });
+                renderTeams();
+            }
+        }
+
+        function removeMember(tNum, idx) {
+            teams[tNum].splice(idx, 1);
+            renderTeams();
+        }
+
+        function updateMemberGenre(tNum, idx, val) {
+            teams[tNum][idx].genre = val;
+            renderTeams();
+        }
+
+        function updateMemberImg(tNum, idx, event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    teams[tNum][idx].img = e.target.result;
+                    renderTeams();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function startBattle() {
+            const team1Name = document.getElementById('team1-name-input').value || 'TEAM A';
+            const team2Name = document.getElementById('team2-name-input').value || 'TEAM B';
+            
+            const rounds = Math.max(5, teams[1].length, teams[2].length);
+            
+            document.getElementById('setup-container').classList.add('hidden');
+            document.getElementById('battle-container').classList.remove('hidden');
+            const actionBtn = document.getElementById('action-btn');
+            actionBtn.disabled = true; 
+            actionBtn.innerText = '배틀 진행 중...';
+
+            const logs = document.getElementById('battle-logs');
+            logs.innerHTML = '';
+            currentBattleEvents = []; 
+
+            let p1Success = 0, p2Success = 0, p1TotalDiff = 0, p2TotalDiff = 0;
+
+            for (let i = 0; i < rounds; i++) {
+                const member1 = teams[1][i % teams[1].length];
+                const member2 = teams[2][Math.floor(Math.random() * teams[2].length)];
+                
+                document.getElementById('p1-battle-img-box').innerHTML = member1.img ? `<img src="${member1.img}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center bg-gray-800 text-xl">👤</div>`;
+                document.getElementById('p2-battle-img-box').innerHTML = member2.img ? `<img src="${member2.img}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center bg-gray-800 text-xl">👤</div>`;
+                document.getElementById('p1-battle-name').innerText = member1.name || '무명';
+                document.getElementById('p2-battle-name').innerText = member2.name || '무명';
+
+                await new Promise(r => setTimeout(r, 1000)); 
+                
+                const statIdx = Math.floor(Math.random() * 6);
+                const statName1 = genreConfig[member1.genre].names[statIdx];
+                const statName2 = genreConfig[member2.genre].names[statIdx];
+                
+                const d1 = Math.floor(Math.random() * 100) + 1;
+                const d2 = Math.floor(Math.random() * 100) + 1;
+                
+                const isP1Ok = d1 <= member1.stats[statIdx];
+                const isP2Ok = d2 <= member2.stats[statIdx];
+
+                if(isP1Ok) p1Success++;
+                if(isP2Ok) p2Success++;
+                
+                p1TotalDiff += (member1.stats[statIdx] - d1);
+                p2TotalDiff += (member2.stats[statIdx] - d2);
+
+                document.getElementById('p1-success-count').innerText = `HIT: ${p1Success}`;
+                document.getElementById('p2-success-count').innerText = `HIT: ${p2Success}`;
+
+                const eventData = {
+                    round: i + 1,
+                    p1: { name: member1.name, statName: statName1, statVal: member1.stats[statIdx], roll: d1, success: isP1Ok },
+                    p2: { name: member2.name, statName: statName2, statVal: member2.stats[statIdx], roll: d2, success: isP2Ok }
+                };
+                currentBattleEvents.push(eventData);
+
+                const logEntry = document.createElement('div');
+                logEntry.className = `dice-roll p-4 bg-[#1F2937] rounded-2xl transition-all duration-300 ${isP1Ok && isP2Ok ? 'success-bg' : (!isP1Ok && !isP2Ok ? 'fail-bg' : '')}`;
+                logEntry.innerHTML = `
+                    <div class="flex justify-between items-center mb-1">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-white italic">${member1.name}</span>
+                            <span class="text-[7px] font-bold text-[#9CA3AF] uppercase tracking-wider">${statName1} (${member1.stats[statIdx]})</span>
+                        </div>
+                        <span class="text-[9px] font-black text-white italic mx-2">VS</span>
+                        <div class="flex flex-col items-end">
+                            <span class="text-[10px] font-black text-white italic">${member2.name}</span>
+                            <span class="text-[7px] font-bold text-[#9CA3AF] uppercase tracking-wider">${statName2} (${member2.stats[statIdx]})</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
+                        <div class="${isP1Ok?'text-green-400':'text-red-400'} font-black text-sm">
+                            ${d1} <small class="text-[8px]">${isP1Ok?'SUCCESS':'FAIL'}</small>
+                        </div>
+                        <div class="text-[8px] font-black italic opacity-20 uppercase tracking-tighter">RD ${i+1}</div>
+                        <div class="${isP2Ok?'text-green-400':'text-red-400'} font-black text-sm">
+                            <small class="text-[8px]">${isP2Ok?'SUCCESS':'FAIL'}</small> ${d2}
+                        </div>
+                    </div>
+                `;
+                logs.prepend(logEntry);
+            }
+
+            await new Promise(r => setTimeout(r, 1200));
+            showWinner(team1Name, team2Name, p1Success, p2Success, p1TotalDiff, p2TotalDiff, rounds);
+        }
+
+        function showWinner(t1Name, t2Name, ps1, ps2, td1, td2, totalRounds) {
+            document.getElementById('battle-container').classList.add('hidden');
+            document.getElementById('result-container').classList.remove('hidden');
+            
+            document.getElementById('action-btn').classList.add('hidden');
+            document.getElementById('action-btn').disabled = false;
+            document.getElementById('action-btn').innerText = '랩배틀 시작';
+            document.getElementById('result-btns').classList.remove('hidden');
+
+            let isP1Winner = ps1 > ps2;
+            if(ps1 === ps2) isP1Winner = td1 >= td2; 
+            
+            const winnerName = isP1Winner ? t1Name : t2Name;
+            const loserName = isP1Winner ? t2Name : t1Name;
+            const winnerScore = isP1Winner ? ps1 : ps2;
+            const loserScore = isP1Winner ? ps2 : ps1;
+
+            matchHistory.unshift({
+                id: Date.now(),
+                winner: winnerName,
+                loser: loserName,
+                winnerScore: winnerScore,
+                loserScore: loserScore,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                events: [...currentBattleEvents] 
+            });
+            renderHistory();
+
+            document.getElementById('winner-name').innerText = winnerName;
+            
+            const winnerTeamIdx = isP1Winner ? 1 : 2;
+            const winnerImg = teams[winnerTeamIdx][0].img;
+            document.getElementById('winner-img-box').innerHTML = winnerImg ? `<img src="${winnerImg}" class="w-full h-full object-cover">` : `<div class="w-full h-full flex items-center justify-center text-5xl bg-gray-800">👤</div>`;
+            
+            const comments = [
+                "모든 역량을 쏟아부어 마침내 승리를 쟁취했습니다.",
+                "래퍼의 위상을 드높였습니다.",
+                "지치지 않는 에너지로 무대를 완벽하게 장악했습니다."
+            ];
+            document.getElementById('winner-desc').innerText = comments[Math.floor(Math.random()*comments.length)];
+
+            document.getElementById('score-bars').innerHTML = `
+                <div class="flex justify-around items-end gap-6 h-32 pt-4">
+                    <div class="flex flex-col items-center flex-1">
+                        <div class="text-sm font-black mb-1 text-[#EF4444]">${ps1} HIT</div>
+                        <div class="w-full bg-[#111827] rounded-t-xl transition-all duration-1000" style="height:${Math.max((ps1/totalRounds)*100, 10)}%; background-color:#EF4444"></div>
+                        <div class="text-[10px] mt-2 font-bold opacity-60 uppercase truncate w-full text-center">${t1Name}</div>
+                    </div>
+                    <div class="flex flex-col items-center flex-1">
+                        <div class="text-sm font-black mb-1 text-[#A855F7]">${ps2} HIT</div>
+                        <div class="w-full bg-[#111827] rounded-t-xl transition-all duration-1000" style="height:${Math.max((ps2/totalRounds)*100, 10)}%; background-color:#A855F7"></div>
+                        <div class="text-[10px] mt-2 font-bold opacity-60 uppercase truncate w-full text-center">${t2Name}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleHistoryDetail(historyId) {
+            const detailEl = document.getElementById(`detail-${historyId}`);
+            if (detailEl.classList.contains('hidden')) {
+                detailEl.classList.remove('hidden');
+            } else {
+                detailEl.classList.add('hidden');
+            }
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = matchHistory.map((item) => `
+                <div class="history-card bg-[#1F2937] border border-[#374151] rounded-2xl overflow-hidden shadow-lg">
+                    <div class="p-4 flex justify-between items-center cursor-pointer hover:bg-white/5 transition" onclick="toggleHistoryDetail(${item.id})">
+                        <div class="flex flex-col">
+                            <span class="text-[8px] text-[#9CA3AF] font-bold uppercase tracking-wider mb-1">${item.time}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-black text-yellow-400 italic">🏆 ${item.winner}</span>
+                                <span class="text-[10px] text-[#9CA3AF] font-bold italic">VS</span>
+                                <span class="text-[10px] text-white/50 font-bold">${item.loser}</span>
+                            </div>
+                        </div>
+                        <div class="text-right flex items-center gap-3">
+                            <div>
+                                <div class="text-xs font-black text-white italic tracking-tighter">
+                                    <span class="text-yellow-400">${item.winnerScore}</span> : ${item.loserScore}
+                                </div>
+                                <div class="text-[7px] font-black text-[#9CA3AF] uppercase">Final</div>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-gray-500"><path d="m6 9 6 6 6-6"/></svg>
+                        </div>
+                    </div>
+                    
+                    <div id="detail-${item.id}" class="hidden bg-[#111827] border-t border-[#374151] p-3 space-y-2 max-h-60 overflow-y-auto no-scrollbar">
+                        <div class="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 border-b border-gray-800 pb-1 italic">Incidents Log</div>
+                        ${item.events.map(ev => `
+                            <div class="p-2 bg-[#1F2937]/30 rounded-lg border border-gray-800 flex flex-col gap-1">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-[7px] font-black text-gray-400 uppercase italic">Round ${ev.round}</span>
+                                </div>
+                                <div class="flex justify-between text-[9px] font-bold">
+                                    <div class="${ev.p1.success ? 'text-green-400' : 'text-red-400'}">
+                                        ${ev.p1.name} <span class="opacity-50 text-[7px]">${ev.p1.statName}(${ev.p1.statVal})</span>: ${ev.p1.roll} [${ev.p1.success?'Success':'Fail'}]
+                                    </div>
+                                    <div class="text-gray-600 font-black italic px-1">VS</div>
+                                    <div class="${ev.p2.success ? 'text-green-400' : 'text-red-400'} text-right">
+                                        [${ev.p2.success?'Success':'Fail'}] ${ev.p2.roll} :<span class="opacity-50 text-[7px]">${ev.p2.statName}(${ev.p2.statVal})</span> ${ev.p2.name}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function rematch() {
+            document.getElementById('result-container').classList.add('hidden');
+            document.getElementById('result-btns').classList.add('hidden');
+            document.getElementById('action-btn').classList.remove('hidden');
+            startBattle();
+        }
+
+        // Initialize teams UI
+        renderTeams();
+    </script>
+</body>
+</html>
